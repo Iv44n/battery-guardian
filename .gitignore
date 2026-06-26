@@ -1,0 +1,14 @@
+# Binarios compilados
+/bin/
+*.exe
+
+# Artefactos de Go
+*.test
+*.out
+coverage.*
+
+# Editor / SO
+.DS_Store
+*.swp
+.idea/
+.vscode/

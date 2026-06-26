@@ -1,0 +1,115 @@
+# 🔋 Battery Guardian
+
+Servicio ligero para Linux que cuida la carga y la salud de la batería del portátil
+mediante **reglas y cálculos** (sin IA). Despierta cada 15–30 s, consume <0.1% de CPU
+y solo usa la **biblioteca estándar de Go** (cero dependencias externas).
+
+Detecta automáticamente el método de control de carga del fabricante detrás de una
+interfaz común (`ChargeController`), así que el mismo daemon sirve para varios equipos:
+
+| Fabricante | Método | Configurable |
+|------------|--------|--------------|
+| Lenovo **IdeaPad** | `conservation_mode` (tope ~60%) | No (on/off) |
+| **ThinkPad** / genérico | `charge_control_end_threshold` | Sí (umbral exacto) |
+
+> Detectado en **este** equipo (IdeaPad Gaming 3 15ACH6): `conservation_mode`.
+
+## ⚠️ Nota importante para IdeaPad
+
+`conservation_mode` **no mantiene un umbral exacto** como en ThinkPad: cuando se activa,
+reapunta el firmware a **~60%**. Por eso, con:
+
+```yaml
+battery:
+  upper_limit: 80
+  lower_limit: 65
+```
+
+el daemon **activa** la protección al llegar a 80% y la **desactiva** al bajar a 65%.
+El comportamiento físico resultante (mantenerse cerca de 80%, o derivar hacia ~60%
+mientras está protegido) depende del firmware y **se observa en los logs**:
+
+```bash
+journalctl -u battery-guardian -f
+```
+
+En equipos con umbral configurable (ThinkPad), `EnableProtection()` fija directamente
+el límite (p.ej. 80%) y sí se mantiene esa banda.
+
+## Qué hace
+
+- **Protección por histéresis**: corta la carga en `upper_limit`, la reanuda en `lower_limit`.
+- **Temperatura**: avisa al superar `warning` / `critical` °C.
+- **Batería baja**: aviso urgente por debajo del 20% sin cargador.
+- **Salud**: aviso (como mucho semanal) si `energy_full/diseño` cae por debajo del umbral.
+- **Cálculos**: potencia (W), tiempo a lleno / autonomía, ritmo (%/min), ciclos, salud.
+- **Notificaciones** de escritorio vía `notify-send`.
+- **Logs** al journal de systemd.
+
+## Estructura
+
+```
+battery-guardian/
+├── cmd/guardian/         # main
+├── internal/
+│   ├── battery/          # lectura de /sys/class/power_supply (charge_* o energy_*)
+│   ├── charge/           # ChargeController: ideapad + threshold + autodetección
+│   ├── sensors/          # temperaturas desde hwmon
+│   ├── rules/            # máquina de estados + reglas
+│   ├── notifier/         # notify-send en la sesión del usuario
+│   ├── logger/           # logger mínimo
+│   └── daemon/           # bucle principal
+├── config.yaml
+├── battery-guardian.service
+├── install.sh / uninstall.sh
+└── Makefile
+```
+
+## Compilar y probar (sin root)
+
+```bash
+git clone https://github.com/Iv44n/battery-guardian.git
+cd battery-guardian
+make build                            # compila (inyecta la versión desde git)
+./bin/battery-guardian -status        # leer estado, sin escribir nada
+./bin/battery-guardian -version       # versión compilada
+```
+
+## Instalar / actualizar como servicio (requiere root)
+
+```bash
+make install                          # compila, copia binario+unidad y (re)arranca
+# o, para actualizar una instalación existente:
+make update
+sudo apt install -y libnotify-bin     # para que funcionen las notificaciones
+```
+
+Comandos útiles:
+
+```bash
+systemctl status battery-guardian
+journalctl -u battery-guardian -f
+battery-guardian -status
+```
+
+## Desinstalar (revierte todo)
+
+```bash
+sudo bash uninstall.sh                 # detiene el servicio y desactiva la protección
+```
+
+## Configuración
+
+Ver `config.yaml`. Tras editarlo: `sudo systemctl restart battery-guardian`.
+
+## Contribuir
+
+Las PRs son bienvenidas, sobre todo para añadir implementaciones de
+`ChargeController` de otros fabricantes (Dell, ASUS, Framework…). El núcleo
+(reglas, cálculos, notificaciones) no cambia: basta con implementar la interfaz
+en `internal/charge` y añadir su detección.
+
+## Licencia
+
+[MIT](LICENSE) © 2026 Iván (Iv44n).
+

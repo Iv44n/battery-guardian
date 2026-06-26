@@ -1,0 +1,27 @@
+# Battery Guardian — configuración
+# Intervalo de muestreo del estado de la batería.
+poll_interval: 20s
+
+battery:
+  # Al llegar a upper_limit se activa la protección (corta la carga).
+  # Al bajar a lower_limit se reanuda la carga.
+  #
+  # IMPORTANTE en IdeaPad: conservation_mode NO fija un umbral exacto;
+  # reapunta el firmware a ~60%. Por eso "upper_limit" es el punto donde el
+  # daemon ACTIVA la protección, no el porcentaje que se mantendrá fijo.
+  # Comportamiento real observable en los logs (journalctl -u battery-guardian).
+  upper_limit: 80
+  lower_limit: 65
+
+notifications:
+  enabled: true
+
+temperature:
+  warning: 42   # °C — aviso
+  critical: 48  # °C — aviso crítico
+
+health:
+  warning: 80   # % — avisa (como mucho una vez por semana) si la salud cae por debajo
+
+logging:
+  enabled: true
