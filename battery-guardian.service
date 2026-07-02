@@ -13,7 +13,20 @@ RestartSec=5
 Nice=10
 # NOTA: no se usa ProtectHome/NoNewPrivileges porque el daemon necesita lanzar
 # notify-send en la sesión del usuario (socket de D-Bus en /run/user/UID), y ese
-# sandboxing lo bloquea.
+# sandboxing lo bloquea. Las directivas siguientes no tocan esa ruta: /sys queda
+# escribible y /run intacto. Si el servicio falla tras actualizar, retíralas.
+ProtectSystem=full
+PrivateTmp=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
 
 [Install]
 WantedBy=multi-user.target

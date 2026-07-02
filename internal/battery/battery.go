@@ -127,13 +127,7 @@ func (m *Monitor) Read() Sample {
 		if full, ok := readInt(filepath.Join(p, "charge_full")); ok {
 			s.fullQ = float64(full)
 		}
-		if cur, ok := readInt(filepath.Join(p, "current_now")); ok {
-			r := float64(cur)
-			if r < 0 {
-				r = -r
-			}
-			s.rateQ = r
-		}
+		s.rateQ = s.CurrentA * 1e6 // current_now ya leído arriba, en valor absoluto
 		if des, ok := readInt(filepath.Join(p, "charge_full_design")); ok && des > 0 {
 			s.HealthPct = s.fullQ / float64(des) * 100
 		}

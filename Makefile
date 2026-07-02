@@ -1,4 +1,4 @@
-.PHONY: build status run install update uninstall clean fmt vet
+.PHONY: build status run install update upgrade uninstall clean fmt vet test
 
 # Versión a partir de git (tag, o hash corto, o "dev").
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
@@ -21,6 +21,17 @@ install: build
 
 # Alias explícito para actualizar una instalación existente.
 update: install
+
+# Actualiza dependencias de Go (si las hubiera), verifica y reinstala.
+upgrade:
+	go get -u ./...
+	go mod tidy
+	go vet ./...
+	go test ./...
+	$(MAKE) install
+
+test:
+	go test ./...
 
 uninstall:
 	sudo bash uninstall.sh
