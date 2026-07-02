@@ -50,6 +50,9 @@ func Load(path string) (Config, error) {
 			cfg.PollInterval = d
 		}
 	}
+	if cfg.PollInterval < time.Second {
+		return Default(), fmt.Errorf("poll_interval (%v) debe ser de al menos 1s", cfg.PollInterval)
+	}
 	if v, ok := flat["battery.upper_limit"]; ok {
 		cfg.UpperLimit = atoiDef(v, cfg.UpperLimit)
 	}
@@ -72,8 +75,20 @@ func Load(path string) (Config, error) {
 		cfg.LogEnabled = boolDef(v, cfg.LogEnabled)
 	}
 
+	if cfg.UpperLimit < 1 || cfg.UpperLimit > 100 {
+		return Default(), fmt.Errorf("upper_limit (%d) debe estar entre 1 y 100", cfg.UpperLimit)
+	}
+	if cfg.LowerLimit < 0 {
+		return Default(), fmt.Errorf("lower_limit (%d) no puede ser negativo", cfg.LowerLimit)
+	}
 	if cfg.LowerLimit >= cfg.UpperLimit {
-		return cfg, fmt.Errorf("lower_limit (%d) debe ser menor que upper_limit (%d)", cfg.LowerLimit, cfg.UpperLimit)
+		return Default(), fmt.Errorf("lower_limit (%d) debe ser menor que upper_limit (%d)", cfg.LowerLimit, cfg.UpperLimit)
+	}
+	if cfg.TempCritical <= cfg.TempWarning {
+		return Default(), fmt.Errorf("temperature.critical (%.0f°C) debe ser mayor que temperature.warning (%.0f°C)", cfg.TempCritical, cfg.TempWarning)
+	}
+	if cfg.HealthWarning < 0 || cfg.HealthWarning > 100 {
+		return Default(), fmt.Errorf("health.warning (%.0f) debe estar entre 0 y 100", cfg.HealthWarning)
 	}
 	return cfg, nil
 }

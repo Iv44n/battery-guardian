@@ -24,16 +24,16 @@ const (
 
 type Notifier struct {
 	enabled bool
-	uid     string
-	uname   string
 }
 
-// New detecta al usuario gráfico activo (primer UID >= 1000 en /run/user).
+// New crea el notificador. El usuario gráfico se detecta en cada envío y no
+// aquí: el servicio arranca en el boot, antes de que exista sesión alguna en
+// /run/user, y una detección única dejaría las notificaciones muertas.
 func New(enabled bool) *Notifier {
-	n := &Notifier{enabled: enabled}
-	n.uid, n.uname = detectUser()
-	return n
+	return &Notifier{enabled: enabled}
 }
+
+// detectUser devuelve el usuario gráfico activo (primer UID >= 1000 en /run/user).
 
 func detectUser() (string, string) {
 	entries, err := os.ReadDir("/run/user")
@@ -83,12 +83,13 @@ func (n *Notifier) Notify(level Level, title, body string) error {
 		}
 		return nil
 	}
-	if n.uid == "" {
-		return nil
+	uid, uname := detectUser()
+	if uid == "" {
+		return fmt.Errorf("no hay sesión de usuario activa en /run/user")
 	}
-	runtime := filepath.Join("/run/user", n.uid)
+	runtime := filepath.Join("/run/user", uid)
 	bus := "unix:path=" + filepath.Join(runtime, "bus")
-	cmd := exec.Command("runuser", "-u", n.uname, "--",
+	cmd := exec.Command("runuser", "-u", uname, "--",
 		"env",
 		"DBUS_SESSION_BUS_ADDRESS="+bus,
 		"XDG_RUNTIME_DIR="+runtime,

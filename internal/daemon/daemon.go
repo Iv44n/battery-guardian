@@ -68,6 +68,11 @@ func (d *Daemon) Run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	if d.cfg.PollInterval <= 0 {
+		d.log.Errorf("intervalo de muestreo inválido: %s", d.cfg.PollInterval)
+		return fmt.Errorf("intervalo de muestreo inválido: %s", d.cfg.PollInterval)
+	}
+
 	ticker := time.NewTicker(d.cfg.PollInterval)
 	defer ticker.Stop()
 
