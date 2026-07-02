@@ -75,28 +75,65 @@ make build                            # compila (inyecta la versión desde git)
 ./bin/battery-guardian -version       # versión compilada
 ```
 
-## Instalar / actualizar como servicio (requiere root)
+## Instalar (requiere root)
+
+Requisitos: Linux con systemd, Go 1.26+ para compilar y `libnotify-bin` para
+las notificaciones de escritorio.
 
 ```bash
-make install                          # compila, copia binario+unidad y (re)arranca
-# o, para actualizar una instalación existente:
-make update
-sudo apt install -y libnotify-bin     # para que funcionen las notificaciones
+git clone https://github.com/Iv44n/battery-guardian.git
+cd battery-guardian
+make install                          # compila, instala y arranca el servicio
+sudo apt install -y libnotify-bin     # notify-send, para las notificaciones
 ```
 
-Comandos útiles:
+`make install` hace, en orden:
+
+1. Compila `bin/battery-guardian` inyectando la versión desde git.
+2. Copia el binario a `/usr/local/bin/battery-guardian`.
+3. Instala `config.yaml` en `/etc/battery-guardian/` — si ya existe uno,
+   **se conserva** y el ejemplo nuevo queda como `config.yaml.new`.
+4. Instala la unidad en `/etc/systemd/system/`, la habilita y (re)arranca el servicio.
+
+Comprueba que quedó funcionando:
 
 ```bash
-systemctl status battery-guardian
-journalctl -u battery-guardian -f
-battery-guardian -status
+systemctl status battery-guardian     # debe estar «active (running)»
+journalctl -u battery-guardian -f     # logs en vivo
+battery-guardian -status              # resumen del estado (sin root)
+sudo battery-guardian -test-notify    # prueba la ruta de notificaciones del servicio
 ```
+
+## Actualizar
+
+```bash
+git pull                              # trae la última versión del repo
+make update                           # recompila, reinstala y reinicia el servicio
+```
+
+o, para además actualizar las dependencias de Go (si las hubiera) y pasar
+`go vet` + tests antes de instalar:
+
+```bash
+make upgrade
+```
+
+En ambos casos tu `/etc/battery-guardian/config.yaml` no se toca. Tras
+actualizar, verifica con `systemctl status battery-guardian`.
 
 ## Desinstalar (revierte todo)
 
 ```bash
-sudo bash uninstall.sh                 # detiene el servicio y desactiva la protección
+make uninstall                        # o: sudo bash uninstall.sh
 ```
+
+El desinstalador:
+
+1. Detiene y deshabilita el servicio.
+2. **Desactiva la protección** — la batería vuelve a cargar con normalidad.
+3. Elimina el binario, la unidad de systemd y `/opt/battery-guardian`.
+4. Conserva `/etc/battery-guardian/config.yaml`; para borrarlo también:
+   `sudo rm -rf /etc/battery-guardian`.
 
 ## Configuración
 
